@@ -1,42 +1,42 @@
 import express from 'express';
-import db from './db/db.js';
+import { masterDB, slaveDB } from './db/db.js';
 import dotenv from 'dotenv/config';
 
-const app = express()
-const port = 3000
+const app = express();
+const port = process.env.PORT;
 
 app.use(express.json());
 
 app.get('/health', async (req, res) => {
     try {
-        await db.raw('SELECT 1');
+        await slaveDB.raw('SELECT 1');
 
-        res.status(200).json({
-            processed_by: `localhost:${process.env.PORT}`,
+        res.json({
+            processed_by: process.env.NODE_NAME,
             success: true,
         });
     } catch (error) {
-        res.json({
-            processed_by: `localhost:${process.env.PORT}`,
+        res.status(500).json({
+            processed_by: process.env.NODE_NAME,
             success: false,
-            message: err.message
+            message: error.message
         });
     }
 })
 
 app.get('/products', async (req, res) => {
     try {
-        const products = await db('products');
+        const products = await slaveDB('products');
         res.json({
-            processed_by: `localhost:${process.env.PORT}`,
+            processed_by: process.env.NODE_NAME,
             success: true,
             data: products
         })
-    } catch (err) {
-        res.json({
-            processed_by: `localhost:${process.env.PORT}`,
+    } catch (error) {
+        res.status(500).json({
+            processed_by: process.env.NODE_NAME,
             success: false,
-            message: err.message
+            message: error.message
         })
     }
 })
@@ -44,18 +44,18 @@ app.get('/products', async (req, res) => {
 app.post('/products', async (req, res) => {
     try {
         const { name, price } = req.body;
-        const [product] = await db('products').insert({ name, price }).returning('*');
+        const [product] = await masterDB('products').insert({ name, price }).returning('*');
         res.json({
-            processed_by: `localhost:${process.env.PORT}`,
+            processed_by: process.env.NODE_NAME,
             success: true,
             data: product
         })
 
-    } catch (err) {
-        res.json({
-            processed_by: `localhost:${process.env.PORT}`,
+    } catch (error) {
+        res.status(500).json({
+            processed_by: process.env.NODE_NAME,
             success: false,
-            message: err.message
+            message: error.message
         })
     }
 })
