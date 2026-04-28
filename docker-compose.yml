@@ -1,0 +1,58 @@
+services:
+  server-api:
+    build: ./server
+    ports:
+      - "3000:3000"
+    environment:
+    - NODE_ENV=production
+    env_file:
+      - ./server/.env
+    depends_on:
+      - postgresql-master
+
+  postgresql-master:
+    image: bitnami/postgresql:latest
+    container_name: postgresql-master
+    restart: always
+    ports:
+      - "6001:5432"
+    volumes:
+      - postgresql_master_data:/bitnami/postgresql
+      - ./db.sql:/docker-entrypoint-initdb.d/db.sql
+    env_file:
+      - ./server/.env
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=master
+      - POSTGRESQL_REPLICATION_USER=${DB_REPLICATE_USER}
+      - POSTGRESQL_REPLICATION_PASSWORD=${DB_REPLICATE_PASSWORD}
+      - POSTGRESQL_USERNAME=${MASTER_DB_USER}
+      - POSTGRESQL_PASSWORD=${MASTER_DB_PASSWORD}
+      - POSTGRESQL_DATABASE=${MASTER_DB_DATABASE}
+      - ALLOW_EMPTY_PASSWORD=no
+
+  postgresql-slave:
+    image: bitnami/postgresql:latest
+    container_name: postgresql-slave
+    restart: always
+    ports:
+      - "6002:5432"
+    depends_on:
+      - postgresql-master
+    volumes:
+      - postgresql_slave_data:/bitnami/postgresql
+    env_file:
+      - ./server/.env
+    environment:
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_MASTER_HOST=postgresql-master
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+      - POSTGRESQL_REPLICATION_USER=${DB_REPLICATE_USER}
+      - POSTGRESQL_REPLICATION_PASSWORD=${DB_REPLICATE_PASSWORD}
+      - POSTGRESQL_PASSWORD=${MASTER_DB_PASSWORD}
+      - ALLOW_EMPTY_PASSWORD=no
+
+volumes:
+  postgresql_master_data:
+    driver: local
+  postgresql_slave_data:
+    driver: local

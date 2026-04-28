@@ -2,10 +2,31 @@ import express from 'express';
 import { masterDB, slaveDB } from './db/db.js';
 import dotenv from 'dotenv/config';
 
+
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 3000;
 
 app.use(express.json());
+
+async function initializeDatabase() {
+    try {
+        const exists = await masterDB.schema.hasTable('products');
+
+        if (!exists) {
+            await masterDB.schema.createTable('products', (table) => {
+                table.increments('id').primary();
+                table.string('name').notNullable();
+                table.decimal('price', 10, 2).notNullable();
+                table.timestamps(true, true);
+            });
+            console.log("Create table products successfully.");
+        } else {
+            console.log("Table products has already existed");
+        }
+    } catch (error) {
+        console.error("Create table error: ", error);
+    }
+}
 
 app.get('/health', async (req, res) => {
     try {
@@ -16,6 +37,7 @@ app.get('/health', async (req, res) => {
             success: true,
         });
     } catch (error) {
+        console.log("ERROR: ", error);
         res.status(500).json({
             processed_by: process.env.NODE_NAME,
             success: false,
@@ -60,6 +82,8 @@ app.post('/products', async (req, res) => {
     }
 })
 
-app.listen(port, () => {
-    console.log(`Example app listening on port ${port}`)
+initializeDatabase().then(() => {
+    app.listen(port, () => {
+        console.log(`Example app listening on port ${port}`)
+    })
 })
