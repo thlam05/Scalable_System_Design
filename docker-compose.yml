@@ -1,14 +1,32 @@
 services:
-  server-api:
+  server-api-1:
     build: ./server
+    container_name: server-api-1
     ports:
       - "3000:3000"
     environment:
-    - NODE_ENV=production
+      - NODE_ENV=production
+      - NODE_NAME=API_SERVER_A
     env_file:
       - ./server/.env
     depends_on:
-      - postgresql-master
+      postgresql-master:
+        condition: service_healthy
+
+  # Server API 2 (Thêm mới)
+  server-api-2:
+    build: ./server # Dùng chung Dockerfile với cái 1
+    container_name: server-api-2
+    ports:
+      - "3001:3000" # Map ra port 3001 trên máy thật để tránh trùng port
+    environment:
+      - NODE_ENV=production
+      - NODE_NAME=API_SERVER_B
+    env_file:
+      - ./server/.env
+    depends_on:
+      postgresql-master:
+        condition: service_healthy
 
   postgresql-master:
     image: bitnami/postgresql:latest
@@ -29,6 +47,13 @@ services:
       - POSTGRESQL_PASSWORD=${MASTER_DB_PASSWORD}
       - POSTGRESQL_DATABASE=${MASTER_DB_DATABASE}
       - ALLOW_EMPTY_PASSWORD=no
+    # --- THÊM HEALTHCHECK Ở ĐÂY ---
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MASTER_DB_USER:-postgres} -d ${MASTER_DB_DATABASE:-postgres}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s # Cho phép 10s đầu tiên để DB khởi tạo script SQL
 
   postgresql-slave:
     image: bitnami/postgresql:latest
@@ -37,7 +62,8 @@ services:
     ports:
       - "6002:5432"
     depends_on:
-      - postgresql-master
+      postgresql-master:
+        condition: service_healthy # Slave chỉ khởi chạy khi Master đã sẵn sàng replication
     volumes:
       - postgresql_slave_data:/bitnami/postgresql
     env_file:

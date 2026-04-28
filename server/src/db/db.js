@@ -19,7 +19,7 @@ const slaveDB = knex({
         port: Number(process.env.SLAVE_DB_PORT),
         user: process.env.SLAVE_DB_USER,
         password: process.env.SLAVE_DB_PASSWORD,
-        database: process.env.SLAVE_DB_DATABASE
+        database: process.env.MASTER_DB_DATABASE
     }
 })
 
