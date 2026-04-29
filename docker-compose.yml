@@ -46,16 +46,17 @@ services:
       - "6001:5432"
     volumes:
       - postgresql_master_data:/bitnami/postgresql
+      - ./postgres/master/postgres.conf:/opt/bitnami/postgresql/conf/conf.d/postgres-master.conf:ro
       - ./db.sql:/docker-entrypoint-initdb.d/db.sql
     env_file:
       - ./server/.env
     environment:
-      - POSTGRESQL_USERNAME=${DB_USER}
-      - POSTGRESQL_PASSWORD=${DB_PASSWORD}
-      - POSTGRESQL_DATABASE=${DB_DATABASE}
+      - POSTGRESQL_USERNAME=${DB_USER:-postgres}
+      - POSTGRESQL_PASSWORD=${DB_PASSWORD:-123456}
+      - POSTGRESQL_DATABASE=${DB_DATABASE:-scalable_system_db}
       - POSTGRESQL_REPLICATION_MODE=master
-      - POSTGRESQL_REPLICATION_USER=${DB_REPLICATE_USER}
-      - POSTGRESQL_REPLICATION_PASSWORD=${DB_REPLICATE_PASSWORD}
+      - POSTGRESQL_REPLICATION_USER=${DB_REPLICATE_USER:-replicator}
+      - POSTGRESQL_REPLICATION_PASSWORD=${DB_REPLICATE_PASSWORD:-123456}
       - ALLOW_EMPTY_PASSWORD=no
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRESQL_USERNAME -d $$POSTGRESQL_DATABASE"]
@@ -75,17 +76,18 @@ services:
         condition: service_healthy
     volumes:
       - postgresql_slave_data:/bitnami/postgresql
+      - ./postgres/slave/postgres.conf:/opt/bitnami/postgresql/conf/conf.d/postgres-slave.conf:ro
     env_file:
       - ./server/.env
     environment:
       - POSTGRESQL_REPLICATION_MODE=slave
       - POSTGRESQL_MASTER_HOST=postgresql-master
       - POSTGRESQL_MASTER_PORT_NUMBER=5432
-      - POSTGRESQL_USERNAME=${DB_USER}
-      - POSTGRESQL_PASSWORD=${DB_PASSWORD}
-      - POSTGRESQL_REPLICATION_USER=${DB_REPLICATE_USER}
-      - POSTGRESQL_REPLICATION_PASSWORD=${DB_REPLICATE_PASSWORD}
-      - POSTGRESQL_DATABASE=${DB_DATABASE}
+      - POSTGRESQL_USERNAME=${DB_USER:-postgres}
+      - POSTGRESQL_PASSWORD=${DB_PASSWORD:-123456}
+      - POSTGRESQL_REPLICATION_USER=${DB_REPLICATE_USER:-replicator}
+      - POSTGRESQL_REPLICATION_PASSWORD=${DB_REPLICATE_PASSWORD:-123456}
+      - POSTGRESQL_DATABASE=${DB_DATABASE:-scalable_system_db}
       - ALLOW_EMPTY_PASSWORD=no
 
 volumes:
